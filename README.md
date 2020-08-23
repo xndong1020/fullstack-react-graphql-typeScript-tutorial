@@ -53,3 +53,5 @@
 13:03:08 Switch to Apollo
 
 [Fullstack React GraphQL TypeScript Tutorial](https://www.youtube.com/watch?v=I6ypD7qv3Z8&t=4902s)
+
+For database, see my other repo [here](https://github.com/xndong1020/postgre-pgadmin)
