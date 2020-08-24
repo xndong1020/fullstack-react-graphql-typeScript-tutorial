@@ -1,9 +1,8 @@
 //  make sure to import it in a global place
 import "reflect-metadata";
 
-// import { MikroORM } from "@mikro-orm/core";
+import { MikroORM } from "@mikro-orm/core";
 import { __prod__ } from "./constants";
-// import { Post } from "./entities/Post";
 
 import express from "express";
 
@@ -14,26 +13,30 @@ import { ApolloServer } from "apollo-server-express";
 import { buildSchema } from "type-graphql";
 
 //
-import { HelloResolver } from "./resolvers/hello";
+import { PostResolver } from "./resolvers/post";
 
 // mikro config
-// import mikroConfig from "./mikro-orm.config";
+import mikroConfig from "./mikro-orm.config";
+// import { Post } from "./entities/Post";
 
 const main = async () => {
   try {
     // init database based on config file
-    // const orm = await MikroORM.init(mikroConfig);
+    const orm = await MikroORM.init(mikroConfig);
     // migrate database automatically rather than manually run it in cli
     // await orm.getMigrator().up();
 
     const app = express();
 
     const schema = await buildSchema({
-      resolvers: [HelloResolver],
+      resolvers: [PostResolver],
       validate: false,
     });
 
-    const apolloServer = new ApolloServer({ schema });
+    const apolloServer = new ApolloServer({
+      schema,
+      context: () => ({ em: orm.em }),
+    });
 
     apolloServer.applyMiddleware({ app });
 
@@ -48,7 +51,7 @@ const main = async () => {
 
     // create an Post object, and use entityManater to inject into data
     // note: here the data is not saved into db yet.
-    // const post = orm.em.create(Post, { title: "my first post 222" });
+    // const post = orm.em.create(Post, { title: "my first post 111" });
     // commit to database
     // await orm.em.persistAndFlush(post);
     // query
