@@ -17,6 +17,7 @@ import { PostResolver } from "./resolvers/post";
 
 // mikro config
 import mikroConfig from "./mikro-orm.config";
+import { UserResolver } from "./resolvers/user";
 // import { Post } from "./entities/Post";
 
 const main = async () => {
@@ -29,7 +30,7 @@ const main = async () => {
     const app = express();
 
     const schema = await buildSchema({
-      resolvers: [PostResolver],
+      resolvers: [PostResolver, UserResolver],
       validate: false,
     });
 
