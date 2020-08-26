@@ -18,16 +18,45 @@ import { PostResolver } from "./resolvers/post";
 // mikro config
 import mikroConfig from "./mikro-orm.config";
 import { UserResolver } from "./resolvers/user";
-// import { Post } from "./entities/Post";
+
+// redis
+import redis from "redis";
+import session from "express-session";
+import connectRedis from "connect-redis";
 
 const main = async () => {
   try {
+    const app = express();
+
+    const RedisStore = connectRedis(session);
+    const redisClient = redis.createClient(6379, "192.168.20.39");
+
+    // session middleware has to run before apollo middleware
+    // 'secret' will be used to sign your cookie
+    // 'disableTouch' is to disable re-saving and reseting the TTL
+    app.use(
+      session({
+        name: "qid",
+        store: new RedisStore({
+          client: redisClient,
+          disableTouch: true,
+        }),
+        cookie: {
+          maxAge: 1000 * 60 * 60 * 24 * 365,
+          httpOnly: true,
+          sameSite: "lax",
+          secure: __prod__,
+        },
+        saveUninitialized: false,
+        secret: "your_cookie_secret_here",
+        resave: false,
+      })
+    );
+
     // init database based on config file
     const orm = await MikroORM.init(mikroConfig);
     // migrate database automatically rather than manually run it in cli
     // await orm.getMigrator().up();
-
-    const app = express();
 
     const schema = await buildSchema({
       resolvers: [PostResolver, UserResolver],
@@ -36,13 +65,12 @@ const main = async () => {
 
     const apolloServer = new ApolloServer({
       schema,
-      context: () => ({ em: orm.em }),
+      context: ({ req, res }) => ({ em: orm.em, req, res }),
     });
 
     apolloServer.applyMiddleware({ app });
 
     app.get("/", (_req, res) => {
-      console.log("routing /");
       res.send("hello");
     });
 

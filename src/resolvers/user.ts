@@ -38,9 +38,27 @@ class UsernamePasswordInput {
 @Resolver()
 export class UserResolver {
   @Query(() => UserResponse)
+  async me(@Ctx() { em, req }: MyContext): Promise<UserResponse> {
+    if (!req.session.userId)
+      return {
+        user: undefined,
+      };
+    const userInDb = await em.findOne(User, { id: req.session.userId });
+    if (!userInDb)
+      return {
+        user: undefined,
+      };
+
+    return {
+      user: userInDb,
+      errors: undefined,
+    };
+  }
+
+  @Query(() => UserResponse)
   async login(
     @Arg("input") input: UsernamePasswordInput,
-    @Ctx() { em }: MyContext
+    @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
     const { username, password } = input;
     if (!username || !password)
@@ -56,11 +74,15 @@ export class UserResolver {
       };
 
     const isPasswordValid = await argon2.verify(userInDb.password, password);
+
     if (!isPasswordValid)
       return {
         user: undefined,
         errors: [{ message: "invalid username/password" }],
       };
+
+    req.session.userId = userInDb.id;
+
     return {
       user: userInDb,
       errors: undefined,
