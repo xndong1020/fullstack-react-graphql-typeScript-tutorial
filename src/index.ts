@@ -74,8 +74,8 @@ const main = async () => {
       res.send("hello");
     });
 
-    app.listen(3000, () => {
-      console.log("[x]: server listening on port 3000");
+    app.listen(4000, () => {
+      console.log("[x]: server listening on port 4000");
     });
 
     // create an Post object, and use entityManater to inject into data
