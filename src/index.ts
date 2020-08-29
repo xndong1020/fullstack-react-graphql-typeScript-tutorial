@@ -5,6 +5,7 @@ import { MikroORM } from "@mikro-orm/core";
 import { __prod__ } from "./constants";
 
 import express from "express";
+import cors from "cors";
 
 //
 import { ApolloServer } from "apollo-server-express";
@@ -30,6 +31,14 @@ const main = async () => {
 
     const RedisStore = connectRedis(session);
     const redisClient = redis.createClient(6379, "192.168.20.39");
+
+    // add cors to all routes
+    app.use(
+      cors({
+        origin: "http://192.168.20.39:3000",
+        credentials: true,
+      })
+    );
 
     // session middleware has to run before apollo middleware
     // 'secret' will be used to sign your cookie
@@ -68,7 +77,10 @@ const main = async () => {
       context: ({ req, res }) => ({ em: orm.em, req, res }),
     });
 
-    apolloServer.applyMiddleware({ app });
+    apolloServer.applyMiddleware({
+      app,
+      cors: false,
+    });
 
     app.get("/", (_req, res) => {
       res.send("hello");
