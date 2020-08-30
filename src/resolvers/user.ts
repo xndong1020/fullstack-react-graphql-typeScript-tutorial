@@ -13,7 +13,9 @@ import { MyContext } from "src/types";
 import argon2 from "argon2";
 
 @ObjectType()
-class Error {
+class FieldError {
+  @Field()
+  field: string;
   @Field(() => String)
   message: string;
 }
@@ -23,8 +25,8 @@ class UserResponse {
   @Field(() => User, { nullable: true })
   user?: User;
 
-  @Field(() => [Error], { nullable: true })
-  errors?: Error[];
+  @Field(() => [FieldError], { nullable: true })
+  errors?: FieldError[];
 }
 
 @InputType()
@@ -51,7 +53,6 @@ export class UserResolver {
 
     return {
       user: userInDb,
-      errors: undefined,
     };
   }
 
@@ -64,28 +65,34 @@ export class UserResolver {
     if (!username || !password)
       return {
         user: undefined,
-        errors: [{ message: "username/password is requried" }],
+        errors: [
+          {
+            field: "usernameOrPassword",
+            message: "username/password is requried",
+          },
+        ],
       };
     const userInDb = await em.findOne(User, { username });
     if (!userInDb)
       return {
-        user: undefined,
-        errors: [{ message: "invalid username/password" }],
+        errors: [
+          { field: "usernameOrPassword", message: "invalid username/password" },
+        ],
       };
 
     const isPasswordValid = await argon2.verify(userInDb.password, password);
 
     if (!isPasswordValid)
       return {
-        user: undefined,
-        errors: [{ message: "invalid username/password" }],
+        errors: [
+          { field: "usernameOrPassword", message: "invalid username/password" },
+        ],
       };
 
     req.session.userId = userInDb.id;
 
     return {
       user: userInDb,
-      errors: undefined,
     };
   }
 
@@ -97,8 +104,12 @@ export class UserResolver {
     const { username, password } = input;
     if (!username || !password)
       return {
-        user: undefined,
-        errors: [{ message: "username/password is requried" }],
+        errors: [
+          {
+            field: "usernameOrPassword",
+            message: "username/password is requried",
+          },
+        ],
       };
     const hashedPassword = await argon2.hash(password);
     try {
@@ -109,12 +120,10 @@ export class UserResolver {
       await em.persistAndFlush(user);
       return {
         user,
-        errors: undefined,
       };
     } catch (error) {
       return {
-        user: undefined,
-        errors: [{ message: error.message }],
+        errors: [{ field: "usernameOrPassword", message: error.message }],
       };
     }
   }
