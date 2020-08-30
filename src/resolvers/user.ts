@@ -11,6 +11,7 @@ import {
 import { User } from "../entities/User";
 import { MyContext } from "src/types";
 import argon2 from "argon2";
+import { EntityManager } from "@mikro-orm/postgresql";
 
 @ObjectType()
 class FieldError {
@@ -99,32 +100,62 @@ export class UserResolver {
   @Mutation(() => UserResponse)
   async register(
     @Arg("input") input: UsernamePasswordInput,
-    @Ctx() { em }: MyContext
+    @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
     const { username, password } = input;
-    if (!username || !password)
+    if (!username)
       return {
         errors: [
           {
-            field: "usernameOrPassword",
-            message: "username/password is requried",
+            field: "username",
+            message: "username is requried",
           },
         ],
       };
+    if (!password) {
+      return {
+        errors: [
+          {
+            field: "password",
+            message: "password is requried",
+          },
+        ],
+      };
+    }
     const hashedPassword = await argon2.hash(password);
     try {
-      const user = await em.create(User, {
-        username,
-        password: hashedPassword,
-      });
-      await em.persistAndFlush(user);
-      return {
-        user,
-      };
+      let user;
+      // this 'EntityManager' class is from "@mikro-orm/postgresql"
+      const result = await (em as EntityManager)
+        .createQueryBuilder(User)
+        .getKnexQuery()
+        .insert({
+          username,
+          password: hashedPassword,
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .returning("*");
+      user = result[0];
+      // store user id session
+      // this will set a cookie on the user
+      // keep them logged in
+      req.session.userId = user.id;
+      return { user };
     } catch (error) {
-      return {
-        errors: [{ field: "usernameOrPassword", message: error.message }],
-      };
+      if (error.detail.includes("already exists"))
+        return {
+          errors: [{ field: "username", message: "username is already taken" }],
+        };
+      else
+        return {
+          errors: [
+            {
+              field: "usernameOrPassword",
+              message: error.message,
+            },
+          ],
+        };
     }
   }
 }
