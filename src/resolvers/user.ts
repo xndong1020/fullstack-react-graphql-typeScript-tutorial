@@ -57,37 +57,42 @@ export class UserResolver {
     };
   }
 
-  @Query(() => UserResponse)
+  @Mutation(() => UserResponse)
   async login(
     @Arg("input") input: UsernamePasswordInput,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
     const { username, password } = input;
-    if (!username || !password)
+    if (!username)
       return {
-        user: undefined,
         errors: [
           {
-            field: "usernameOrPassword",
-            message: "username/password is requried",
+            field: "username",
+            message: "username is requried",
           },
         ],
       };
+    if (!password) {
+      return {
+        errors: [
+          {
+            field: "password",
+            message: "password is requried",
+          },
+        ],
+      };
+    }
     const userInDb = await em.findOne(User, { username });
     if (!userInDb)
       return {
-        errors: [
-          { field: "usernameOrPassword", message: "invalid username/password" },
-        ],
+        errors: [{ field: "username", message: "invalid username/password" }],
       };
 
     const isPasswordValid = await argon2.verify(userInDb.password, password);
 
     if (!isPasswordValid)
       return {
-        errors: [
-          { field: "usernameOrPassword", message: "invalid username/password" },
-        ],
+        errors: [{ field: "password", message: "invalid username/password" }],
       };
 
     req.session.userId = userInDb.id;
